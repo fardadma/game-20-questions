@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="X-UA-Compatible" content="ie=edge">
+        <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+        <script src="/socket.io/socket.io.js"></script>
+        <link rel="stylesheet" href="/style/style.css"  />
+        <title>20 Questions</title>
+    </head>
+    <body>
+        <div id="app" style="width:2048">
+            <div v-if="state == 'entry'" class="center">
+                <h1> Welcome To {{ appName }} </h1>
+                <h3> Please choose your role </h3>
+                <button v-on:click="StartQuestioner" style="width: 160px; height: 40px;"> Questioner </button> &nbsp;&nbsp; 
+                <button v-on:click="StartKeeper" style="width: 160px; height: 40px;"> Word Keeper </button>
+            </div>
+            <div v-if="state == 'keeper'">
+                <h2>Hello Word Keeper </h2>
+                <form @submit.prevent="RegisterKeeper">
+                    <input type="text" placeholder="Player Name" v-model:value="playerName" /> <br />
+                    <input type="text" placeholder="Game Answer" v-model:value="answer" /> <br />
+                    <input class="button" type="submit" value="Register" />
+                </form>
+            </div>
+            <div v-if="state == 'questioner'">
+                <h2>Hello Questioner </h2>
+                <form @submit.prevent="RegisterQuestioner">
+                    <input type="text" placeholder="Player Name" v-model:value="playerName" /> <br />
+                    <input class="button" type="submit" value="Register" />
+                </form>
+            </div>
+            <div v-if="state == 'findMatch'" class="center" style="height: 400px">
+                <h3>Shearching for your opponent ...</h3> 
+                Please wait !
+            </div>
+            <div v-if="state == 'Q-OnGame'">
+                <h3 class=regular><b>{{playerName}}</b> VS <b>{{opponentName}}</b> </h3>
+                Answer : ????
+                <ol id="questionBox">
+                    <li v-for="ques in questions">
+                        {{ ques.text }} ? <span v-if="ques.ans != null"> <b> {{ ques.ans }} </b> </span>
+                    </li>
+                </ol>
+                <span v-if="!wait4Opponent">
+                        <form @submit.prevent="SendQuestion">
+                            <input type="text" placeholder="Question" v-model:value="lastQ" style="width:500px"/> <br />
+                            <input class="button" type="submit" value="Send" style='width:100px' />
+                        </form>            
+                </span>
+            </div>
+            <div v-if="state == 'K-OnGame'">
+                <h3 class=regular><b>{{playerName}}</b> VS <b>{{opponentName}}</b> </h3>
+                Answer : <b>{{ answer }}</b>
+                <ol id="questionBox">
+                    <li v-for="ques in questions">
+                        {{ ques.text }} ? <span v-if="ques.ans != null"> <b> {{ ques.ans }} </b> </span>
+                    </li>
+                </ol>
+                <span v-if="!wait4Opponent">
+                    <button v-on:click="SendAnswer('Yes')" style="width:60px"> Yes </button> &nbsp;&nbsp;  
+                    <button v-on:click="SendAnswer('No')" style="width:60px"> No </button>
+                </span>
+            </div>
+            <div v-if="finished" class="center">
+                <h3 v-html="finalMessage"> </h3>
+                <div class=center>
+                    <button onclick="location.reload()" style="width: 160px; height: 40px;"> Start Again </button> &nbsp;&nbsp;  
+                </div>
+            </div>
+        </div>        
+        <script>
+            var connHandler = null;
+            var app = new Vue({
+                el : "#app",
+                data : {
+                    appName : '20 Questions Multiplayer Game',
+                    state : 'entry',
+                    playerRole : '',
+                    playerName : '',
+                    opponentName : '',
+                    answer : '',
+                    questions : [],
+                    lastQ : '',
+                    wait4Opponent : false,
+                    finished : false,
+                    finalMessage : '',
+                },
+                methods: {
+                    StartQuestioner: function (event) {
+                        this.state = 'questioner';
+                        this.playerRole = 'Q';
+                    },
+                    StartKeeper: function (event) {
+                        this.state = 'keeper';
+                        this.playerRole = 'K'
+                    },
+                    RegisterKeeper: function () {
+                        this.state = 'findMatch'
+                        this.wait4Opponent = true;
+                        connHandler.emit('joinKeeper', {'name' : this.playerName, "answer" : this.answer})
+                    },
+                    RegisterQuestioner: function () {
+                        this.state = 'findMatch'
+                        this.wait4Opponent = false;
+                        connHandler.emit('joinQuestioner', this.playerName)
+                    },
+                    SendQuestion: function () {
+                        var q = this.lastQ.replace("?", "");
+                        var ques = {"text" : q , "ans" : null};
+                        this.questions.push(ques)
+                        this.wait4Opponent = true;
+                        connHandler.emit('question', ques);
+                        this.lastQ = '';
+                    },
+                    SendAnswer: function(ans) {
+                        var ques = this.questions.pop();
+                        ques.ans = ans;
+                        this.questions.push(ques);
+                        this.wait4Opponent = true;
+                        connHandler.emit("answer", ques);                       
+                    },
+                },
+                created: function () {
+                    connHandler = io();
+                },
+                mounted: function () {
+                    connHandler.on("startGame", function(name) {
+                        app.opponentName = name;
+                        app.state = app.playerRole + '-OnGame';
+                    })
+                    connHandler.on("question", function(ques) {
+                        app.wait4Opponent = false;
+                        app.questions.push(ques);
+                    })
+                    connHandler.on("answer", function(ques) {
+                        app.wait4Opponent = false;
+                        app.questions.pop();
+                        app.questions.push(ques);
+                    })
+                    connHandler.on("success", function(ques) {
+                        app.wait4Opponent = true;
+                        app.finished = true;
+                        if (app.playerRole == "Q") 
+                            app.finalMessage = "Congratulation you find the answer <br /> The answer was: " + ques.text;
+                        else
+                            app.finalMessage = "Your opponent find the answer <br /> His/Her answer is: " + ques.text;
+                    })
+                    connHandler.on("faild", function(ques) {
+                        app.wait4Opponent = true;
+                        app.finished = true;
+                        if (app.playerRole == "Q") 
+                            app.finalMessage = "Unfortunately you cannot find the answer <br /> The answer was: " + ques.text;
+                        else
+                            app.finalMessage = "Congratulation Your opponent can't find the answer <br/ > His/Her last guess was: " + ques.text;
+                    })
+
+                    
+                }
+            });
+        </script>
+    </body>
+</html>

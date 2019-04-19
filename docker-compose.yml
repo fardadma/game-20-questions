@@ -1,0 +1,8 @@
+version: '3'
+services:
+  app:
+    container_name: game-20-questions
+    restart: always
+    build: .
+    ports:
+      - '50100:8080'

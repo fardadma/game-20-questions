@@ -1,0 +1,23 @@
+{
+  "name": "20questions",
+  "version": "1.0.0",
+  "description": "20 Question Multiplayer Game",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fardadma/20Questions.git"
+  },
+  "author": "Ali",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/fardadma/20Questions/issues"
+  },
+  "homepage": "https://github.com/fardadma/20Questions#readme",
+  "dependencies": {
+    "express": "^4.16.3",
+    "socket.io": "^2.2.0"
+  }
+}
