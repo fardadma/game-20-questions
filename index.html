@@ -89,6 +89,12 @@
                     finalMessage : '',
                 },
                 methods: {
+                    xssproof: function (data) {
+                        var resultData = data;
+                        resultData = resultData.replace(/</g, "&lt;");
+                        resultData = resultData.replace(/>/g, "&gt;");
+                        return resultData;
+                    },
                     StartQuestioner: function (event) {
                         this.state = 'questioner';
                         this.playerRole = 'Q';
@@ -108,7 +114,7 @@
                         connHandler.emit('joinQuestioner', this.playerName)
                     },
                     SendQuestion: function () {
-                        var q = this.lastQ.replace("?", "");
+                        var q = this.lastQ.replace(/\?/g, "");
                         var ques = {"text" : q , "ans" : null};
                         this.questions.push(ques)
                         this.wait4Opponent = true;
@@ -144,20 +150,19 @@
                         app.wait4Opponent = true;
                         app.finished = true;
                         if (app.playerRole == "Q") 
-                            app.finalMessage = "Congratulation you find the answer <br /> The answer was: " + ques.text;
+                            app.finalMessage = "Congratulation you find the answer <br /> The answer was: " + app.xssproof(ques.text);
                         else
-                            app.finalMessage = "Your opponent find the answer <br /> His/Her answer is: " + ques.text;
+                            app.finalMessage = "Your opponent find the answer <br /> His/Her answer is: " + app.xssproof(ques.text);
                     })
                     connHandler.on("faild", function(ques) {
                         app.wait4Opponent = true;
                         app.finished = true;
                         if (app.playerRole == "Q") 
-                            app.finalMessage = "Unfortunately you cannot find the answer <br /> The answer was: " + ques.text;
+                            app.finalMessage = "Unfortunately you cannot find the answer <br /> The answer was: " + app.xssproof(ques.text);
                         else
-                            app.finalMessage = "Congratulation Your opponent can't find the answer <br/ > His/Her last guess was: " + ques.text;
+                            app.finalMessage = "Congratulation Your opponent can't find the answer <br/ > His/Her last guess was: " + app.xssproof(ques.text);
                     })
-
-                    
+                
                 }
             });
         </script>
