@@ -21,11 +21,21 @@ io.on('connection', (socket) => {
                 socket.type = "K";
                 socket.qCount = 0;
                 if (questionerQ.length > 0) {
-                    opponentSocket = questionerQ.shift();
-                    socket.opSocket = opponentSocket;
-                    opponentSocket.opSocket = socket;
-                    socket.emit('startGame', opponentSocket.playerName)
-                    opponentSocket.emit('startGame', socket.playerName)
+                    while (questionerQ.length > 0) {
+                        opponentSocket = questionerQ.shift();
+                        if (opponentSocket.connected) {
+                            break;
+                        }
+                    }
+                    if (opponentSocket.connected) {
+                        socket.opSocket = opponentSocket;
+                        opponentSocket.opSocket = socket;
+                        socket.emit('startGame', opponentSocket.playerName)
+                        opponentSocket.emit('startGame', socket.playerName)
+                    }
+                    else {
+                        keeperQ.push(socket);
+                    }
                 }
                 else {
                     keeperQ.push(socket);
@@ -34,18 +44,29 @@ io.on('connection', (socket) => {
             catch (ex) {
                 console.log("An Error Happend!");
             }        
-    })
+        })
+        
         socket.on('joinQuestioner', (registerData) => {
             try {
                 console.log("Registering a Questioner ... " );
                 socket.playerName = registerData;
                 socket.type = "Q";
                 if (keeperQ.length > 0) {
-                    opponentSocket = keeperQ.shift();
-                    socket.opSocket = opponentSocket;
-                    opponentSocket.opSocket = socket;
-                    socket.emit('startGame', opponentSocket.playerName)
-                    opponentSocket.emit('startGame', socket.playerName)
+                    while (keeperQ.length > 0) {
+                        opponentSocket = keeperQ.shift();
+                        if (opponentSocket.connected) {
+                            break;
+                        }
+                    }
+                    if (opponentSocket.connected) {
+                        socket.opSocket = opponentSocket;
+                        opponentSocket.opSocket = socket;
+                        socket.emit('startGame', opponentSocket.playerName)
+                        opponentSocket.emit('startGame', socket.playerName)
+                    }
+                    else {
+                        questionerQ.push(socket);
+                    }
                 }
                 else {
                     questionerQ.push(socket);
@@ -54,7 +75,7 @@ io.on('connection', (socket) => {
             catch (ex) {
                 console.log("An Error Happend!");
             }        
-    })
+        })
 
         socket.on('question', (ques) => {
             try {
@@ -70,7 +91,7 @@ io.on('connection', (socket) => {
             catch (ex) {
                 console.log("An Error Happend!");
             }        
-    })
+        })
 
         socket.on('answer', (ques) => {
             try {
